@@ -70,6 +70,7 @@ class Dataset(TorchDataset):
                  units='kcal/mol',
                  check_props=True,
                  do_copy=True,
+                 stack=False,
                  device=0):
         """Constructor for Dataset class.
 
@@ -81,9 +82,9 @@ class Dataset(TorchDataset):
         """
         if check_props:
             if do_copy:
-                self.props = self._check_dictionary(deepcopy(props))
+                self.props = self._check_dictionary(deepcopy(props),stack=stack)
             else:
-                self.props = self._check_dictionary(props)
+                self.props = self._check_dictionary(props,stack=stack)
         else:
             self.props = props
         self.units = units
@@ -138,7 +139,7 @@ class Dataset(TorchDataset):
 
         return copy.deepcopy(self)
 
-    def _check_dictionary(self, props):
+    def _check_dictionary(self, props, stack=stack):
         """Check the dictionary or properties to see if it has the
         specified format.
 
@@ -161,7 +162,7 @@ class Dataset(TorchDataset):
         for key, val in props.items():
 
             if val is None:
-                props[key] = to_tensor([np.nan] * n_geoms)
+                props[key] = to_tensor([np.nan] * n_geoms,stack=stack)
 
             elif any([x is None for x in val]):
                 bad_indices = [i for i, item in enumerate(val) if item is None]
@@ -175,13 +176,13 @@ class Dataset(TorchDataset):
                                 * float('NaN')).tolist()
                 for index in bad_indices:
                     props[key][index] = nan_list
-                props.update({key: to_tensor(val)})
+                props.update({key: to_tensor(val,stack=stack)})
 
             else:
                 assert len(val) == n_geoms, (f'length of {key} is not '
                                              f'compatible with {n_geoms} '
                                              'geometries')
-                props[key] = to_tensor(val)
+                props[key] = to_tensor(val,stack=stack)
 
         return props
 
@@ -277,7 +278,7 @@ class Dataset(TorchDataset):
 
         nbrlist = []
         offsets = []
-        for nxyz, lattice in zip(self.props['nxyz'], self.props['lattice']):
+        for nxyz, lattice in tqdm(zip(self.props['nxyz'], self.props['lattice']),total=len(self.props['nxyz'])):
             atoms = AtomsBatch(
                 nxyz[:, 0].long(),
                 props={'num_atoms': torch.LongTensor([len(nxyz[:, 0])])},
@@ -594,7 +595,7 @@ class Dataset(TorchDataset):
         self.props['bond_len'] = all_bond_len
         self.props['offsets'] = all_offsets
         self.props['nbr_list'] = all_nbr_list
-        self._check_dictionary(deepcopy(self.props))
+        self._check_dictionary(deepcopy(self.props),stack=stack)
 
     @classmethod
     def from_file(cls, path):
