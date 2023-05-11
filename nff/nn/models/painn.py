@@ -2,7 +2,7 @@ from torch import nn
 import numpy as np
 import copy
 from nff.utils.tools import make_directed
-from nff.nn.modules.painn import (MessageBlock, UpdateBlock,
+from nff.nn.modules.painn import (MessageBlock, UpdateBlock, NewEmbeddingBlock,
                                   EmbeddingBlock, ReadoutBlock,
                                   TransformerMessageBlock,
                                   NbrEmbeddingBlock)
@@ -11,6 +11,7 @@ from nff.nn.modules.schnet import (AttentionPool, SumPool, MolFpPool,
 from nff.nn.modules.diabat import DiabaticReadout, AdiabaticReadout
 from nff.nn.layers import (Diagonalize, ExpNormalBasis)
 from nff.utils.scatter import scatter_add
+import json
 
 POOL_DIC = {"sum": SumPool,
             "mean": MeanPool,
@@ -51,7 +52,7 @@ class Painn(nn.Module):
             self.sigma = modelparams["V_ex_sigma"]
 
         self.grad_keys = modelparams["grad_keys"]
-        self.embed_block = EmbeddingBlock(feat_dim=feat_dim)
+        #self.embed_block = EmbeddingBlock(feat_dim=feat_dim)
         self.message_blocks = nn.ModuleList(
             [MessageBlock(feat_dim=feat_dim,
                           activation=activation,
@@ -100,6 +101,10 @@ class Painn(nn.Module):
 
         self.compute_delta = modelparams.get("compute_delta", False)
         self.cutoff = cutoff
+        f = open("atom_init.json")
+        self.atom_inits = json.load(f)
+        self.atom_init_size = len(self.atom_inits["1"])
+        self.embed_block = NewEmbeddingBlock(self.atom_init_size,feat_dim=feat_dim)
 
     def set_cutoff(self):
         if hasattr(self, "cutoff"):
@@ -126,6 +131,11 @@ class Painn(nn.Module):
 
         z_numbers = nxyz[:, 0].long()
 
+        num_atoms = z_numbers.shape[0]
+
+        inits = batch['init']
+        inits = inits.view(-1,self.atom_init_size)
+
         # get r_ij including offsets and excluding
         # anything in the neighbor skin
         self.set_cutoff()
@@ -134,7 +144,7 @@ class Painn(nn.Module):
                              nbrs=nbrs,
                              cutoff=self.cutoff)
 
-        s_i, v_i = self.embed_block(z_numbers,
+        s_i, v_i = self.embed_block(inits,num_atoms,
                                     nbrs=nbrs,
                                     r_ij=r_ij)
         results = {}

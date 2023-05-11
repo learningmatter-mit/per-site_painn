@@ -69,7 +69,8 @@ class Dataset(TorchDataset):
                  props,
                  units='kcal/mol',
                  check_props=True,
-                 do_copy=True):
+                 do_copy=True,
+                 device=0):
         """Constructor for Dataset class.
 
         Args:
@@ -87,6 +88,7 @@ class Dataset(TorchDataset):
             self.props = props
         self.units = units
         self.to_units('kcal/mol')
+        self.device = device
 
     def __len__(self):
         """Summary
@@ -183,6 +185,19 @@ class Dataset(TorchDataset):
 
         return props
 
+    
+    def generate_atom_initializations(self,atom_inits):
+
+        self.props["init"] = []
+
+        for idx in tqdm(range(len(self.props["nxyz"]))):
+
+            curr_nxyz = self.props["nxyz"][idx]
+
+            initial_rep = np.vstack([atom_inits[str(int(n))] for n in curr_nxyz[:,0]])
+
+            self.props["init"].append(torch.tensor(initial_rep))
+
     def generate_neighbor_list(self,
                                cutoff,
                                undirected=True,
@@ -270,7 +285,8 @@ class Dataset(TorchDataset):
                 cell=lattice,
                 pbc=True,
                 cutoff=cutoff,
-                directed=(not undirected)
+                directed=(not undirected),
+                device = self.device,
             )
             nbrs, offs = atoms.update_nbr_list()
             nbrlist.append(nbrs)

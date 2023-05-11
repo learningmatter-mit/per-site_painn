@@ -322,6 +322,25 @@ class UpdateBlock(nn.Module):
 
         return delta_s_i, delta_v_i
 
+class NewEmbeddingBlock(nn.Module):
+    def __init__(self,init_size,
+                 feat_dim):
+
+        super().__init__()
+        self.atom_embed = nn.Linear(init_size, feat_dim)
+        self.feat_dim = feat_dim
+
+    def forward(self,
+                init_vec,num_atoms,
+                **kwargs):
+
+        sz = init_vec.shape[0]
+        s_i = self.atom_embed(init_vec)
+        v_i = (torch.zeros(num_atoms, self.feat_dim, 3)
+               .to(s_i.device))
+
+        return s_i, v_i
+
 
 class EmbeddingBlock(nn.Module):
     def __init__(self,
