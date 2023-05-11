@@ -139,7 +139,7 @@ class Dataset(TorchDataset):
 
         return copy.deepcopy(self)
 
-    def _check_dictionary(self, props, stack=stack):
+    def _check_dictionary(self, props, stack):
         """Check the dictionary or properties to see if it has the
         specified format.
 
