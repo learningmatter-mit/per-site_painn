@@ -101,7 +101,7 @@ class Painn(nn.Module):
 
         self.compute_delta = modelparams.get("compute_delta", False)
         self.cutoff = cutoff
-        f = open("atom_init.json")
+        f = open("processing/dataloader/atom_init.json")
         self.atom_inits = json.load(f)
         self.atom_init_size = len(self.atom_inits["1"])
         self.embed_block = NewEmbeddingBlock(self.atom_init_size,feat_dim=feat_dim)
