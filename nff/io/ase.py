@@ -218,19 +218,10 @@ class AtomsBatch(Atoms):
         ensemble_offsets_list = []
 
         for i, atoms in enumerate(Atoms_list):
-            edge_from, edge_to, offsets = torch_nbr_list(
-                atoms,
-                (self.cutoff + self.cutoff_skin),
-                device=self.device,
-                directed=self.directed,
-                requires_large_offsets=self.requires_large_offsets)
 
+            edge_from, edge_to, offsets = neighbor_list('ijS', self, self.cutoff)
             nbr_list = torch.LongTensor(np.stack([edge_from, edge_to], axis=1))
             these_offsets = sparsify_array(offsets.dot(self.get_cell()))
-            
-            # non-periodic
-            if isinstance(these_offsets, int):
-                these_offsets = torch.Tensor(offsets)
 
             ensemble_nbr_list.append(
                 self.props['num_atoms'][: i].sum() + nbr_list)
